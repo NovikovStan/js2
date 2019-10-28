@@ -5,7 +5,6 @@ const products = [
     {id: 4, imgSrc: "img/gamepad.jpg", title: 'Gamepad', price: 4500},
   ];
   
-  
   const renderProduct = (good) => `<div class="product-item">
                                     <img src="${good.imgSrc}">
                                     <h3>${good.title}</h3>
