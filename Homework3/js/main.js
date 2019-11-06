@@ -82,21 +82,40 @@ class ProductCart {
   }
 
   _addProduct(product) {
-    //TODO: Очень кривая проверка на наличие продукта в корзине. Придумать как исправить.
-    let itemCheck = false;
-    this.goods.forEach(element => {
-      console.log(element[0]);
+    // Добавление в корзину или увеличение кол-ва товара в корзине
+    let index = this.goods.findIndex(
+      element => element[0].id_product === product.id_product
+    );
 
-      if (element[0].id_product === product.id_product) {
-        element[1]++;
-        itemCheck = true;
-      }
-    });
-
-    if (!itemCheck) {
+    if (index === -1) {
       this.goods.push([product, 1]);
+    } else {
+      this.goods[index][1]++;
     }
+    this._renderCart();
+  }
 
+  _removeProduct(product) {
+    // Уменьшение кол-ва товара в корзине. Если кол-во равно 0, то товар убирается из корзины.
+    let index = this.goods.findIndex(
+      element => element[0].id_product === product.id_product
+    );
+    if (this.goods[index][1] === 1) {
+      this._deleteProduct(product);
+    } else {
+      this.goods[index][1]--;
+    }
+    this._renderCart();
+  }
+
+  _deleteProduct(product) {
+    // Убрать товар из корнизы полностью (все кол-во).
+    this.goods.splice(
+      this.goods.findIndex(
+        element => element[0].id_product === product.id_product
+      ),
+      1
+    );
     this._renderCart();
   }
 
@@ -115,15 +134,16 @@ class ProductCart {
       cartBlock.innerHTML += `Ваши покупки: <hr>`;
       var htmlStr = "";
       for (let i = 0; i < this.goods.length; i++) {
-        htmlStr += `<div class="cart-item"><p>${
+        htmlStr += `<div class="cart-item"><div class="cart-item_desc"><p>${
           this.goods[i][0].product_name
-        }: ${this.goods[i][0].price *
-          this.goods[i][1]}
-          </p><button class="buy-btn" data-id="${
-          this.goods[i][0].id
-        }">+</button><button class="del-btn" data-id="${
-          this.goods[i][0].id
-        }">-</button></div>`;
+        }: ${this.goods[i][0].price * this.goods[i][1]}
+          </p></div><div class="cart-item-btnblock"><button class="add-btn" data-id="${
+            this.goods[i][0].id_product
+          }">+</button><button class="rem-btn" data-id="${
+          this.goods[i][0].id_product
+        }">-</button><button class="del-btn" data-id="${
+          this.goods[i][0].id_product
+        }">x</button></div></div>`;
       }
       cartBlock.innerHTML += htmlStr;
       cartBlock.innerHTML += `<hr> Итоговая сумма: ${this._calcTotal()}`;
@@ -131,27 +151,71 @@ class ProductCart {
   }
 }
 
+class Listeners { // Класс обработчиков событий.
+  constructor(list, cart) {
+    this.allProducts = document.querySelector(".products");
+    this.cartBtn = document.querySelector(".btn-cart");
+    this.cartBody = document.querySelector(".cart-block");
+    this.list = list;
+    this.cart = cart;
+    this._init();
+  }
+
+  _init() {
+    this._listenerForCartBody();
+    this._listenerForCartItems();
+    this._listenerForProducts();
+  }
+
+  _listenerForCartBody() {
+    this.cartBtn.addEventListener("click", () => {
+      document.querySelector(".cart-block").classList.toggle("invisible");
+    });
+  }
+
+  _listenerForProducts() {
+    this.allProducts.addEventListener("click", evt => {
+      // Добавление в корзину или увеличение кол-ва товара в корзине по нажатию кнопки "Купить"
+      if (evt.target.classList.contains("buy-btn")) {
+        this.list.goods.forEach(element => {
+          if (element.id_product === +evt.target.dataset["id"]) {
+            this.cart._addProduct(element);
+          }
+        });
+      }
+    });
+  }
+
+  _listenerForCartItems() {
+    this.cartBody.addEventListener("click", evt => {
+      // Увеличение кол-ва товара в корзине
+      if (evt.target.classList.contains("add-btn")) {
+        this.list.goods.forEach(element => {
+          if (element.id_product === +evt.target.dataset["id"]) {
+            this.cart._addProduct(element);
+          }
+        });
+      } else if (evt.target.classList.contains("rem-btn")) {
+        // Уменьшение кол-ва товара в корзине. Если кол-во равно 0, то товар убирается из корзины.
+        this.list.goods.forEach(element => {
+          if (element.id_product === +evt.target.dataset["id"]) {
+            this.cart._removeProduct(element);
+          }
+        });
+      } else if (evt.target.classList.contains("del-btn")) {
+        // Убрать товар из корнизы полностью (все кол-во).
+        this.list.goods.forEach(element => {
+          if (element.id_product === +evt.target.dataset["id"]) {
+            this.cart._deleteProduct(element);
+          }
+        });
+      }
+    });
+  }
+}
+
 window.onload = () => {
   const list = new ProductList();
   let cart = new ProductCart();
-  cart._renderCart();
-
-  document.querySelector(".btn-cart").addEventListener("click", function() {
-    document.querySelector(".cart-block").classList.toggle("invisible");
-  });
-
-  document.addEventListener("click", function(e) {
-    if (e.target.classList.contains("buy-btn")) {
-      list.goods.forEach(element => {
-        if (element.id_product === +e.target.dataset["id"]) {
-          cart._addProduct(element);
-        }
-      });
-    }
-
-    // TODO: Доделать кнопки удаления.
-    // if (e.target.classList.contains("del-btn")) {
-    //   removeFromCart(+e.target.dataset["id"]);
-    // }
-  });
+  let listeners = new Listeners(list, cart);
 };
